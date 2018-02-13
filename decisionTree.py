@@ -1,24 +1,18 @@
 def gini_index(targets):
-	# We have two potential samples, first we count the number of sub-samples in total
-	number_of_sub_samples = float(sum([len(target) for target in targets]))
-	# We assume a perfect split to start with
 	gini_index = 0.0
-	# We want a list of the unique values the target can take
+	# number of observations across both samples.
+	total_number_of_observations = len(sum(targets,[]))
+	# classes the targets can take on
 	possible_targets = list(set(sum(targets,[])))
 	# We iterate through the two samples and determine how well divided they are
-	for sample_targets in targets:
-		number_of_subsamples = float(len(sample_targets))
-		# sometimes our samples will not be successful in splitting given and one
-		# array will be empty. We do not want this at splits and hence, ignore.
-		if number_of_subsamples == 0:
-			continue
-		relative_size = (number_of_subsamples / number_of_sub_samples)
-		score = 0.0
-		for target in possible_targets:
-			proportion_in_target = sample_targets.count(target)/number_of_subsamples
-			score += proportion_in_target**2
-		# calculate weighted gini index for the potential
-		gini_index += (1.0 - score) * relative_size
+	for split_i in targets:
+		observations_in_split = len(split_i)
+		# at end nodes we will not need to split further
+		if observations_in_split is not 0:
+			relative_size = float(observations_in_split)/total_number_of_observations
+			score = sum([(float(split_i.count(target))/observations_in_split)**2 for target in possible_targets])
+			# calculate weighted gini index
+			gini_index += (1.0 - score) * relative_size
 	return gini_index
 
 def split_data(i,given_value,data, targets):
