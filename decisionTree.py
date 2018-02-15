@@ -29,7 +29,7 @@ def split_data(i,given_value,data,targets):
 	"""
 	left_branch, right_branch, left_targets, right_targets = ([] for i in xrange(4))
 	for record,target in zip(data, targets):
-		if record[i] < given_value:
+		if record[i] != given_value:
 			left_branch.append(record)
 			left_targets.append(target)
 		else:
@@ -76,45 +76,60 @@ def split(node, max_depth, min_size, depth):
 	Purpose: given an initial split, node, recursively create
 			 branches, taking both the maximum depth and
 			 minimum number of observations into account.
+	To Note: there are two conditions to stop the recursive
+			 process, the first is checking no further splits
+			 can be made and the second, we don't breach our
+			 maximum depth.
 	"""
 	left_data, right_data,left_target, right_target = node['split']
 	del(node['split'])
-	# at end nodes one of the two branches will be empty
+	# at end nodes one of the two branches will be empty and hence,
+	# they should predict equal outcomes.
 	if not left_data or not right_data:
 		node['left'] = node['right'] = find_mode(left_target + right_target)
 		return node
-	# check for max depth
+	# if the tree has reached the maximum depth then we assign the
+	# left and right nodes their respective predicted outcomes.
 	if depth >= max_depth:
 		node['left'], node['right'] = find_mode(left_target), find_mode(right_target)
 		return node
-	# process left child
-	if len(left_target) <= min_size:
+
+	# in the event that a split resulted in a child node with
+	# equal or fewer records than the minimum sample then do
+	# not split further. Furthermore, if another split results in the 
+	# unecessary branches then do not split. Otherwise, split further.
+	if len(left_target) <= min_size or len(left_target) == sum(left_target):
 		node['left'] = find_mode(left_target)
 	else:
 		node['left'] = get_optimal_split(left_data, left_target)
 		split(node['left'], max_depth, min_size, depth+1)
-	# process right child
-	if len(right_target) <= min_size:
+
+	if len(right_target) <= min_size or len(right_target) == sum(right_target):
 		node['right'] = find_mode(right_target)
 	else:
 		node['right'] = get_optimal_split(right_data, right_target)
 		split(node['right'], max_depth, min_size, depth+1)
 
-def train_tree(X_training,y_training, max_depth, min_size):
+def fit(X_training,y_training, max_depth, min_size):
+	""" 
+	Purpose: construct a tree to later be used for prediction
+	"""
 	root_node = get_optimal_split(X_training,y_training)
 	split(root_node, max_depth, min_size, 1)
 	return root_node
 
 def print_tree(node, depth=0):
 	if isinstance(node, dict):
-		print('%s[X%d = %.3f]' % ((depth*' ', (node['index']+1), node['value'])))
-		print_tree(node['left'], depth+1)
-		print_tree(node['right'], depth+1)
+		print('%s[Var %d = %d]' % ((depth*'\t', (node['index']+1), node['value'])))
+		depth+=1
+		print_tree(node['left'], depth)
+		print_tree(node['right'], depth)
 	else:
-		print('%s[%s]' % ((depth*' ', node)))
+		# print predicted class in end node
+		print('%s[%s]' % ((depth*'\t', node)))
 
 def predict(node, sample):
-	if sample[node['index']] < node['value']:
+	if sample[node['index']] == node['value']:
 		if isinstance(node['left'], dict):
 			return predict(node['left'], sample)
 		else:
